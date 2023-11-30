@@ -1,0 +1,236 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+struct Book {
+    int book_id;
+    char title[100];
+    char author[100];
+    int copies_available;
+};
+
+struct User {
+    int user_id;
+    char name[100];
+};
+
+struct Transaction {
+    int user_id;
+    int book_id;
+    struct Transaction* next;
+};
+
+struct Book library[100];
+struct User users[100];
+struct Transaction* transactions = NULL;  // Linked list for transactions
+int catalogSize = 0;
+int userCount = 0;
+
+void addBook(int id, const char title[], const char author[], int copies) {
+    if (catalogSize < 100) {
+        library[catalogSize].book_id = id;
+        strcpy(library[catalogSize].title, title);
+        strcpy(library[catalogSize].author, author);
+        library[catalogSize].copies_available = copies;
+        catalogSize++;
+        printf("Book added to the catalog.\n");
+    } else {
+        printf("Catalog is full. Cannot add more books.\n");
+    }
+}
+
+void addUser(int id, const char name[]) {
+    if (userCount < 100) {
+        users[userCount].user_id = id;
+        strcpy(users[userCount].name, name);
+        userCount++;
+        printf("User added to the system.\n");
+    } else {
+        printf("User database is full. Cannot add more users.\n");
+    }
+}
+
+void borrowBook(int user_id, int book_id) {
+    // Check if the book exists in the catalog
+    int book_index = -1;
+    for (int i = 0; i < catalogSize; i++) {
+        if (library[i].book_id == book_id) {
+            book_index = i;
+            break;
+        }
+    }
+
+    if (book_index != -1) {
+        if (library[book_index].copies_available > 0) {
+            // Update the catalog and record the transaction in the linked list
+            library[book_index].copies_available--;
+
+            struct Transaction* newTransaction = (struct Transaction*)malloc(sizeof(struct Transaction));
+            newTransaction->user_id = user_id;
+            newTransaction->book_id = book_id;
+            newTransaction->next = transactions;
+            transactions = newTransaction;
+
+            printf("Book borrowed successfully.\n");
+        } else {
+            printf("All copies of the book are currently checked out.\n");
+        }
+    } else {
+        printf("Book not found in the catalog.\n");
+    }
+}
+
+void returnBook(int user_id, int book_id) {
+    // Find the transaction and update the catalog
+    struct Transaction* current = transactions;
+    struct Transaction* prev = NULL;
+
+    while (current != NULL) {
+        if (current->user_id == user_id && current->book_id == book_id) {
+            // Update catalog and remove the transaction
+            int book_index = -1;
+            for (int j = 0; j < catalogSize; j++) {
+                if (library[j].book_id == book_id) {
+                    book_index = j;
+                    break;
+                }
+            }
+            if (book_index != -1) {
+                library[book_index].copies_available++;
+
+                if (prev == NULL) {
+                    transactions = current->next;
+                } else {
+                    prev->next = current->next;
+                }
+
+                free(current);
+                printf("Book returned successfully.\n");
+                return;
+            }
+        }
+
+        prev = current;
+        current = current->next;
+    }
+
+    printf("Book return failed. Transaction not found.\n");
+}
+
+void displayCatalog() {
+    if (catalogSize == 0) {
+        printf("The catalog is empty.\n");
+    } else {
+        printf("Library Catalog:\n");
+        for (int i = 0; i < catalogSize; i++) {
+            printf("Book ID: %d\n", library[i].book_id);
+            printf("Title: %s\n", library[i].title);
+            printf("Author: %s\n", library[i].author);
+            printf("Copies available: %d\n", library[i].copies_available);
+            printf("----------------------------\n");
+        }
+    }
+}
+
+void displayUsers() {
+    if (userCount == 0) {
+        printf("No users in the system.\n");
+    } else {
+        printf("Users in the System:\n");
+        for (int i = 0; i < userCount; i++) {
+            printf("User ID: %d\n", users[i].user_id);
+            printf("Name: %s\n", users[i].name);
+            printf("----------------------------\n");
+        }
+    }
+}
+
+void displayTransactions() {
+    struct Transaction* current = transactions;
+    printf("Transaction History:\n");
+    while (current != NULL) {
+        printf("User ID: %d, Book ID: %d\n", current->user_id, current->book_id);
+        current = current->next;
+    }
+}
+
+void freeTransactions() {
+    struct Transaction* current = transactions;
+    while (current != NULL) {
+        struct Transaction* next = current->next;
+        free(current);
+        current = next;
+    }
+}
+
+int main() {
+    int choice, book_id, user_id, copies;
+    char title[100], author[100], user_name[100];
+
+    while (1) {
+        printf("Library Management System\n");
+        printf("1. Add a Book\n");
+        printf("2. Add a User\n");
+        printf("3. Borrow a Book\n");
+        printf("4. Return a Book\n");
+        printf("5. Display Catalog\n");
+        printf("6. Display Users\n");
+        printf("7. Display Transactions\n");
+        printf("8. Exit\n");
+        printf("Enter your choice: ");
+        scanf("%d", &choice);
+
+        switch (choice) {
+            case 1:
+                printf("Enter Book ID: ");
+                scanf("%d", &book_id);
+                printf("Enter Title: ");
+                scanf(" %[^\n]s", title);
+                printf("Enter Author: ");
+                scanf(" %[^\n]s", author);
+                printf("Enter number of copies: ");
+                scanf("%d", &copies);
+                addBook(book_id, title, author, copies);
+                break;
+            case 2:
+                printf("Enter User ID: ");
+                scanf("%d", &user_id);
+                printf("Enter User Name: ");
+                scanf(" %[^\n]s", user_name);
+                addUser(user_id, user_name);
+                break;
+            case 3:
+                printf("Enter User ID: ");
+                scanf("%d", &user_id);
+                printf("Enter Book ID: ");
+                scanf("%d", &book_id);
+                borrowBook(user_id, book_id);
+                break;
+            case 4:
+                printf("Enter User ID: ");
+                scanf("%d", &user_id);
+                printf("Enter Book ID: ");
+                scanf("%d", &book_id);
+                returnBook(user_id, book_id);
+                break;
+            case 5:
+                displayCatalog();
+                break;
+            case 6:
+                displayUsers();
+                break;
+            case 7:
+                displayTransactions();
+                break;
+            case 8:
+                // Free the allocated memory for the linked list before exiting
+                freeTransactions();
+                printf("Goodbye!\n");
+                return 0;
+            default:
+                printf("Invalid choice. Please try again.\n");
+        }
+    }
+
+    return 0;
+}
